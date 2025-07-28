@@ -1,0 +1,35 @@
+schema 
+
+form input
+
+name
+email
+gender
+age
+is Developer
+main skill
+
+total clicks
+form submited
+male 
+females
+
+{
+    date
+    desktop visitors
+    mobile visitors
+}
+
+# Dynamic From Builder Schema 
+
+- Forms Schema
+    - from title
+    - from description
+    - fields[
+        {
+            - id
+            - label
+            - type
+            - 
+        }
+    ]
