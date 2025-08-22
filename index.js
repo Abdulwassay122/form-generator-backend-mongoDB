@@ -34,6 +34,7 @@ const corsOptions = {
   },
   credentials: true, // if you're sending cookies
 };
+
 app.use(cors(corsOptions)); // enable CORS for that domain
 app.use(express.json());
 // for Uploading file
@@ -51,9 +52,11 @@ app.get("/", (req, res) => {
   res.send("MongoDB + Express Connected!");
 });
 
-app.listen(port, "0.0.0.0", () => {
-  console.log(`✅ Server running on port ${port}`);
-});
+// app.listen(port, "0.0.0.0", () => {
+//   console.log(`✅ Server running on port ${port}`);
+// });
+module.exports = app;
+
 
 // for uploading file to uplaods
 const uploadBaseDir = "uploads";
