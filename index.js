@@ -155,6 +155,27 @@ app.post("/users", async (req, res) => {
   }
 });
 
+app.delete("/deleteuserbyid", async (req, res) => {
+  try {
+    const { id } = req.query;
+
+    if (!id) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const deletedUser = await User.findByIdAndDelete(id);
+
+    if (!deletedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ message: "User deleted successfully", user: deletedUser });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 app.get("/users", async (req, res) => {
   const users = await User.find();
   res.json(users);
@@ -338,7 +359,6 @@ app.get("/submitformbyemailandformid", async (req, res) => {
 app.post("/verify", async (req, res) => {
   try {
     const { email } = req.body;
-    console.log(email);
 
     const existingUser = await User.findOne({ email });
     const existingToken = await OtpToken.findOne({ email });
