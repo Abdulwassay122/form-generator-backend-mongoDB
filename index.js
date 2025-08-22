@@ -18,7 +18,7 @@ const port = process.env.PORT || 3000;
 // cors
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://easy-forms-kappa-seven.vercel.app/",
+  "https://easyforms-ten.vercel.app",
 ];
 
 const corsOptions = {
