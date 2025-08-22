@@ -52,9 +52,18 @@ app.get("/", (req, res) => {
   res.send("MongoDB + Express Connected!");
 });
 
+app.get("/", (req, res) => {
+  res.send("API is working!");
+});
+
 // app.listen(port, "0.0.0.0", () => {
 //   console.log(`✅ Server running on port ${port}`);
 // });
+if (process.env.NODE_ENV !== "production") {
+  const port = process.env.PORT || 3000;
+  app.listen(port, () => console.log(`Local server on http://localhost:${port}`));
+}
+
 module.exports = app;
 
 
