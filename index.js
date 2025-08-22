@@ -16,9 +16,23 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // cors
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://easy-forms-kappa-seven.vercel.app/",
+];
+
 const corsOptions = {
-  origin: "http://localhost:5173", // allow Vite/React frontend
-  credentials: true, // if you're sending cookies (optional)
+  origin: (origin, callback) => {
+    // allow requests with no origin (like mobile apps, Postman)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true, // if you're sending cookies
 };
 app.use(cors(corsOptions)); // enable CORS for that domain
 app.use(express.json());
