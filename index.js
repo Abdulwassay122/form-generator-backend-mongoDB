@@ -4,10 +4,13 @@ const User = require("./models/User");
 const cors = require("cors");
 const CreateForm = require("./models/Forms");
 const FormResponse = require("./models/FormResponse");
+const OtpToken = require("./models/Verify");
 const multer = require("multer");
 const { v4: uuidv4 } = require("uuid");
 const path = require("path");
 const fs = require("fs");
+const bcrypt = require("bcryptjs");
+const { sendEmail } = require("./utils/sendEmial");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -113,14 +116,42 @@ app.get("/file/:userId/:formId/:filename", (req, res) => {
 app.post("/users", async (req, res) => {
   try {
     const { name, email, gender, password } = req.body;
-    const user = new User({ name, email, gender, password });
-    if (user) {
-      const saved = await user.save();
-      res.status(201).json(saved);
+
+    if (!name || !email || !gender || !password) {
+      return res.status(400).json({ error: "All fields are required." });
     }
+
+    // check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res
+        .status(409)
+        .json({ error: "Email already exists. Try another email." });
+    }
+
+    // hash password
+    const hashedPassword = await bcrypt.hash(password, 11);
+
+    // create new user
+    const user = new User({
+      name,
+      email,
+      gender,
+      password: hashedPassword,
+    });
+
+    const saved = await user.save();
+
+    res.status(201).json({
+      _id: saved._id,
+      name: saved.name,
+      email: saved.email,
+      gender: saved.gender,
+      isVerified: saved.isVerified,
+    });
   } catch (err) {
     console.error("Error creating user:", err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -300,5 +331,88 @@ app.get("/submitformbyemailandformid", async (req, res) => {
   } catch (err) {
     console.error("Error in GET /createform:", err);
     return res.status(500).json({ error: err.message });
+  }
+});
+
+// For Verifying User
+app.post("/verify", async (req, res) => {
+  try {
+    const { email } = req.body;
+    console.log(email);
+
+    const existingUser = await User.findOne({ email });
+    const existingToken = await OtpToken.findOne({ email });
+
+    if (!existingUser) {
+      return res.status(409).json({ error: "--Email not Found." });
+    } else if (existingToken) {
+      return res.status(409).json({ error: "Verification is Already Sent." });
+    }
+
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    const hashedOtp = await bcrypt.hash(otp, 11);
+
+    const OtpRequest = new OtpToken({
+      email: email,
+      otpHash: hashedOtp,
+    });
+
+    const response = await OtpRequest.save();
+
+    const sent = await sendEmail(email, otp);
+
+    if (!sent) {
+      return res.status(500).json({ error: "Failed to send email" });
+    }
+
+    return res.status(201).json({ message: "OTP sent successfully" });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+app.get("/verify", async (req, res) => {
+  try {
+    const { email, otp } = req.query;
+
+    const response = await OtpToken.findOne({ email });
+    if (response === null) {
+      return res
+        .status(404)
+        .json({ message: "Your Token is expired. OR Incorrect Email" });
+    } else if (response.attempts >= 3) {
+      return res
+        .status(403)
+        .json({ message: "Maximum attempts reached. Try to Veifying Again." });
+    }
+
+
+    // increment attempts by 1 and return the updated document
+    const increment = await OtpToken.findOneAndUpdate(
+      { email },
+      { $inc: { attempts: 1 } }, // increment attempts
+      { new: true } // return updated doc
+    );
+    if (!increment) {
+      return res.status(404).json({ error: "No OTP found for this email" });
+    }
+
+    const comparision = await bcrypt.compare(otp, response.otpHash);
+    if (!comparision) {
+      return res.status(400).json({ message: "Invalid Otp." });
+    } else if (comparision) {
+      const updatedUser = await User.findOneAndUpdate(
+        { email },
+        { $set: { isVerified: true } },
+        { new: true }
+      );
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      return res.status(200).json({ message: "Verification Successful." });
+    }
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
   }
 });
