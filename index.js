@@ -11,6 +11,7 @@ const path = require("path");
 const fs = require("fs");
 const bcrypt = require("bcryptjs");
 const { sendEmail } = require("./utils/sendEmial");
+require("dotenv").config(); // at the very top
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -42,7 +43,7 @@ app.use("/uploads", express.static("public/uploads"));
 
 mongoose
   .connect(
-    "mongodb+srv://test:test1234@cluster0.x43f49z.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+    process.env.MONGO_URI
   )
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection:", err.message));
