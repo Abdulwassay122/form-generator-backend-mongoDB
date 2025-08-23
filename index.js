@@ -59,10 +59,6 @@ app.get("/", (req, res) => {
 // app.listen(port, "0.0.0.0", () => {
 //   console.log(`✅ Server running on port ${port}`);
 // });
-if (process.env.NODE_ENV !== "production") {
-  const port = process.env.PORT || 3000;
-  app.listen(port, () => console.log(`Local server on http://localhost:${port}`));
-}
 
 module.exports = app;
 
