@@ -12,6 +12,10 @@ const fs = require("fs");
 const bcrypt = require("bcryptjs");
 const { sendEmail } = require("./utils/sendEmial");
 require("dotenv").config(); // at the very top
+const jwt = require("jsonwebtoken");
+const SECRET = process.env.SECRET; // Use env variable in production
+
+console.log(SECRET);
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -42,9 +46,7 @@ app.use(express.json());
 app.use("/uploads", express.static("public/uploads"));
 
 mongoose
-  .connect(
-    process.env.MONGO_URI
-  )
+  .connect(process.env.MONGO_URI)
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection:", err.message));
 
@@ -53,11 +55,9 @@ app.get("/", (req, res) => {
   res.send("MongoDB + Express Connected!");
 });
 
-
 app.listen(port, "0.0.0.0", () => {
   console.log(`✅ Server running on port ${port}`);
 });
-
 
 // for uploading file to uplaods
 const uploadBaseDir = "uploads";
@@ -199,11 +199,32 @@ app.get("/users", async (req, res) => {
   res.json(users);
 });
 
-app.get("/user", async (req, res) => {
-  const { email } = req.query;
-  const users = await User.find(email ? { email } : {});
-  res.json(users);
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  const users = await User.find({ email });
+  if (!users || users.length === 0) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  const user = users[0];
+  const checkPass = await bcrypt.compare(password, user.password);
+  if (!checkPass) {
+    return res.status(401).json({ error: "Invalid password" });
+  }
+
+  const token = jwt.sign(
+    { id: user._id, email: user.email, role: user.role },
+    SECRET,
+    { expiresIn: "30d" }
+  );
+
+  // Remove sensitive data before sending
+  const { password: _, ...safeUser } = user.toObject();
+
+  res.status(200).json(safeUser);
 });
+
 app.get("/getuserbyid", async (req, res) => {
   const { id } = req.query;
   const users = await User.find({ _id: id });
@@ -423,7 +444,6 @@ app.get("/verify", async (req, res) => {
         .status(403)
         .json({ message: "Maximum attempts reached. Try to Veifying Again." });
     }
-
 
     // increment attempts by 1 and return the updated document
     const increment = await OtpToken.findOneAndUpdate(
